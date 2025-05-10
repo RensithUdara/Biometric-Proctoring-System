@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import face_recognition
 import numpy as np
 import cv2
@@ -6,12 +6,14 @@ import os
 from flask_cors import CORS
 import datetime
 import json
+from fpdf import FPDF
 
 app = Flask(__name__)
 CORS(app)
 
 KNOWN_FACES_DIR = 'models/known_faces'
 REPORTS_FILE = 'reports/violations.json'
+PDF_REPORT_PATH = 'reports/violation_report.pdf'
 known_face_encodings = []
 known_face_names = []
 
@@ -54,6 +56,11 @@ def log_violation_endpoint():
     log_violation(violation_type, details)
     return jsonify({"status": "logged"})
 
+@app.route('/download-report')
+def download_report():
+    create_pdf_report()
+    return send_file(PDF_REPORT_PATH, as_attachment=True)
+
 def log_violation(violation_type, details):
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     log = {"timestamp": timestamp, "type": violation_type, "details": details}
@@ -66,6 +73,23 @@ def log_violation(violation_type, details):
     logs.append(log)
     with open(REPORTS_FILE, 'w') as f:
         json.dump(logs, f, indent=2)
+
+def create_pdf_report():
+    try:
+        with open(REPORTS_FILE, 'r') as f:
+            logs = json.load(f)
+    except:
+        logs = []
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
+    pdf.ln(10)
+    for log in logs:
+        line = f"{log['timestamp']} | {log['type']} | {log['details']}"
+        pdf.multi_cell(0, 10, txt=line)
+    os.makedirs(os.path.dirname(PDF_REPORT_PATH), exist_ok=True)
+    pdf.output(PDF_REPORT_PATH)
 
 if __name__ == '__main__':
     app.run(debug=True)
