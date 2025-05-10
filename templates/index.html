@@ -1,14 +1,16 @@
-<!-- Basic Exam UI + Webcam Snapshot -->
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Proctored Exam</title>
+  <title>Proctored Exam Portal</title>
   <script defer src="/static/script.js"></script>
 </head>
 <body>
-  <h1>Online Exam</h1>
+  <h1>Online Exam Proctoring</h1>
+  <input type="text" id="examUrl" placeholder="Enter exam URL here" style="width: 300px">
+  <button onclick="loadExam()">Start Exam</button>
+  <br><br>
   <video id="webcam" autoplay playsinline width="320" height="240"></video>
-  <button onclick="verifyFace()">Verify Identity</button>
+  <iframe id="examFrame" width="100%" height="500px" style="display:none;"></iframe>
   <p id="status"></p>
 </body>
 </html>
