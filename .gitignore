@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.env
+*.venv
+venv/
+ENV/
+env/
+
+# Flask & general development
+instance/
+*.db
+*.sqlite3
+*.log
+.DS_Store
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Reports and generated files
+/reports/*.json
+/reports/*.pdf
+
+# Node modules (if ever used)
+/node_modules/
+
+# VS Code / JetBrains / editor-specific
+.vscode/
+.idea/
+*.swp
+
+# Environment files
+.env
