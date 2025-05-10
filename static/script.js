@@ -18,7 +18,7 @@ function verifyFace() {
         fetch('/verify-face', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
-                document.getElementById('status').textContent = JSON.stringify(data);
+                document.getElementById('status').textContent = `Status: ${data.status}`;
                 if (data.status !== 'verified') logViolation(data.status, 'Face verification failed');
             });
     });
