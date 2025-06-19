@@ -1,6 +1,6 @@
 # -------- requirements.txt --------
-# flask
-# opencv-python
-# face_recognition
-# numpy
-# flask-cors
+flask
+opencv-python
+face_recognition
+numpy
+flask-cors
