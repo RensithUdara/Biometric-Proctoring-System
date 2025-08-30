@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, session
 import face_recognition
 import numpy as np
 import cv2
@@ -7,15 +7,59 @@ from flask_cors import CORS
 import datetime
 import json
 from fpdf import FPDF
+import sqlite3
+import base64
+from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
+import threading
+import time
 
 app = Flask(__name__)
 CORS(app)
+app.secret_key = secrets.token_hex(16)
 
 KNOWN_FACES_DIR = 'models/known_faces'
 REPORTS_FILE = 'reports/violations.json'
 PDF_REPORT_PATH = 'reports/violation_report.pdf'
+DATABASE_PATH = 'reports/proctoring.db'
 known_face_encodings = []
 known_face_names = []
+
+# Initialize database
+def init_db():
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT UNIQUE,
+            student_name TEXT,
+            exam_name TEXT,
+            start_time TIMESTAMP,
+            end_time TIMESTAMP,
+            status TEXT
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS violations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            timestamp TIMESTAMP,
+            violation_type TEXT,
+            details TEXT,
+            severity INTEGER,
+            image_data TEXT,
+            FOREIGN KEY (session_id) REFERENCES sessions (session_id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+# Initialize database on startup
+init_db()
 
 # Load known face encodings
 for filename in os.listdir(KNOWN_FACES_DIR):
