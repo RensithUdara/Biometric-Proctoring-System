@@ -1,4 +1,4 @@
-// Advanced Proctoring System JavaScript
+// Enhanced Proctoring System JavaScript
 class ProctoringSystem {
     constructor() {
         this.video = document.getElementById('webcam');
@@ -12,10 +12,43 @@ class ProctoringSystem {
         this.consecutiveNoFace = 0;
         this.tabSwitchCount = 0;
         this.isRecording = false;
+        this.analytics = {
+            faceVerifications: 0,
+            attentionChecks: 0,
+            totalViolations: 0,
+            sessionStartTime: null
+        };
         
         this.initializeCamera();
         this.setupEventListeners();
         this.loadSavedData();
+        this.initializeAnalytics();
+    }
+
+    initializeAnalytics() {
+        this.analytics.sessionStartTime = new Date();
+        this.updateAnalyticsDisplay();
+    }
+
+    updateAnalyticsDisplay() {
+        // Update analytics in the UI if elements exist
+        const elements = {
+            faceVerifications: document.getElementById('faceVerifications'),
+            attentionChecks: document.getElementById('attentionChecks'),
+            sessionDuration: document.getElementById('sessionDuration')
+        };
+
+        if (elements.faceVerifications) {
+            elements.faceVerifications.textContent = this.analytics.faceVerifications;
+        }
+        if (elements.attentionChecks) {
+            elements.attentionChecks.textContent = this.analytics.attentionChecks;
+        }
+        if (elements.sessionDuration && this.analytics.sessionStartTime) {
+            const duration = new Date() - this.analytics.sessionStartTime;
+            const minutes = Math.floor(duration / 60000);
+            elements.sessionDuration.textContent = `${minutes} minutes`;
+        }
     }
 
     async initializeCamera() {
