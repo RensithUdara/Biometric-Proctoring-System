@@ -356,4 +356,140 @@ def create_pdf_report():
     pdf.output(PDF_REPORT_PATH)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Load configuration
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+            print("Configuration loaded successfully")
+    except FileNotFoundError:
+        print("Config file not found, using defaults")
+        config = {}
+    
+    print("Starting Biometric Proctoring System...")
+    print(f"Known faces loaded: {len(known_face_names)}")
+    print(f"Database initialized: {DATABASE_PATH}")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+# Additional API endpoints for enhanced functionality
+@app.route('/api/stats')
+def get_stats():
+    """Get system statistics"""
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    # Get total sessions
+    cursor.execute('SELECT COUNT(*) FROM sessions')
+    total_sessions = cursor.fetchone()[0]
+    
+    # Get active sessions
+    cursor.execute('SELECT COUNT(*) FROM sessions WHERE status = "active"')
+    active_sessions = cursor.fetchone()[0]
+    
+    # Get total violations
+    cursor.execute('SELECT COUNT(*) FROM violations')
+    total_violations = cursor.fetchone()[0]
+    
+    # Get violations by type
+    cursor.execute('''
+        SELECT violation_type, COUNT(*) 
+        FROM violations 
+        GROUP BY violation_type 
+        ORDER BY COUNT(*) DESC
+    ''')
+    violations_by_type = dict(cursor.fetchall())
+    
+    conn.close()
+    
+    return jsonify({
+        'total_sessions': total_sessions,
+        'active_sessions': active_sessions,
+        'total_violations': total_violations,
+        'violations_by_type': violations_by_type,
+        'known_faces': len(known_face_names)
+    })
+
+@app.route('/api/sessions')
+def get_sessions():
+    """Get all sessions with pagination"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    offset = (page - 1) * per_page
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT s.session_id, s.student_name, s.exam_name, s.start_time, s.end_time, s.status,
+               COUNT(v.id) as violation_count
+        FROM sessions s
+        LEFT JOIN violations v ON s.session_id = v.session_id
+        GROUP BY s.session_id
+        ORDER BY s.start_time DESC
+        LIMIT ? OFFSET ?
+    ''', (per_page, offset))
+    
+    sessions = []
+    for row in cursor.fetchall():
+        sessions.append({
+            'session_id': row[0],
+            'student_name': row[1],
+            'exam_name': row[2],
+            'start_time': row[3],
+            'end_time': row[4],
+            'status': row[5],
+            'violation_count': row[6]
+        })
+    
+    conn.close()
+    return jsonify({'sessions': sessions})
+
+@app.route('/api/upload-face', methods=['POST'])
+def upload_face():
+    """Upload a new known face"""
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image provided'}), 400
+    
+    file = request.files['image']
+    name = request.form.get('name', '').strip()
+    
+    if not name:
+        return jsonify({'error': 'Name is required'}), 400
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    try:
+        # Save the uploaded image
+        filename = f"{name}.jpg"
+        filepath = os.path.join(KNOWN_FACES_DIR, filename)
+        file.save(filepath)
+        
+        # Reload known faces
+        load_known_faces()
+        
+        return jsonify({'message': f'Face for {name} uploaded successfully'})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/config')
+def get_config():
+    """Get current configuration"""
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+        return jsonify(config)
+    except:
+        return jsonify({'error': 'Configuration not found'}), 404
+
+@app.route('/api/config', methods=['POST'])
+def update_config():
+    """Update configuration"""
+    try:
+        config = request.get_json()
+        with open('config.json', 'w') as f:
+            json.dump(config, f, indent=2)
+        return jsonify({'message': 'Configuration updated successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
