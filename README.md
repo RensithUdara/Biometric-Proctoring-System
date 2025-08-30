@@ -1,53 +1,73 @@
-# 🛡️ Advanced Biometric Proctoring System
+# 🛡️ ProctorAI - Advanced Biometric Proctoring System
 
-A comprehensive AI-powered proctoring solution with real-time face recognition, attention monitoring, and violation detection for secure online examinations.
+<div align="center">
 
-![ProctorAI Dashboard](https://img.shields.io/badge/ProctorAI-Dashboard-blue?style=for-the-badge)
+![ProctorAI Logo](https://img.shields.io/badge/ProctorAI-v2.0-blue?style=for-the-badge&logo=shield-alt)
 ![Python](https://img.shields.io/badge/Python-3.8+-green?style=for-the-badge&logo=python)
 ![Flask](https://img.shields.io/badge/Flask-3.0+-red?style=for-the-badge&logo=flask)
-![OpenCV](https://img.shields.io/badge/OpenCV-4.8+-orange?style=for-the-badge&logo=opencv)
+![OpenCV](https://img.shields.io/badge/OpenCV-4.10+-orange?style=for-the-badge&logo=opencv)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
+
+*A comprehensive AI-powered proctoring solution with real-time biometric verification, intelligent monitoring, and advanced analytics for secure online examinations.*
+
+[🚀 Quick Start](#-installation) • [📖 Documentation](#-documentation) • [🤝 Contributing](#-contributing) • [🐛 Issues](https://github.com/RensithUdara/Biometric-Proctoring-System/issues)
+
+</div>
+
+---
+
+## ✨ What's New in v2.0
+
+### 🔥 **Enhanced AI Detection**
+- **Gaze Direction Analysis** - Advanced eye tracking with attention scoring
+- **Suspicious Object Detection** - Automatic detection of phones, books, papers
+- **Emotion Recognition** - Monitor stress levels and behavioral patterns
+- **Image Quality Assessment** - Real-time feedback on lighting and camera positioning
+
+### 🎨 **Modern UI/UX**
+- **Completely Redesigned Interface** - Professional, intuitive design
+- **Real-time Animations** - Smooth transitions and visual feedback
+- **Mobile-Responsive** - Perfect experience across all devices
+- **Accessibility Features** - WCAG 2.1 compliant design
+
+### � **Advanced Analytics**
+- **Live Dashboard** - Real-time monitoring of all sessions
+- **Violation Trends** - Comprehensive analytics with charts
+- **Export Capabilities** - JSON/CSV data export
+- **Performance Metrics** - System health monitoring
 
 ## 🚀 Features
 
-### Core Functionality
-- **🔍 Real-time Face Recognition**: Advanced face detection and verification using state-of-the-art algorithms
-- **👥 Multiple Person Detection**: Automatically detects and alerts for multiple people in frame
-- **👁️ Attention Monitoring**: Eye tracking to ensure student focus during exams
-- **🖥️ Screen Activity Monitoring**: Detects tab switching, window changes, and suspicious activities
-- **🔊 Audio Analysis**: Optional audio monitoring for environmental sounds
-- **📱 Mobile Support**: Responsive design works on various devices
+### 🔐 **Biometric Security**
+- **Face Recognition**: State-of-the-art face detection and verification
+- **Identity Verification**: Continuous monitoring with confidence scoring
+- **Multi-face Detection**: Alerts when multiple people are present
+- **Liveness Detection**: Prevents photo/video spoofing attempts
 
-### Security Features
-- **🚫 Keyboard Shortcut Prevention**: Blocks common shortcuts that could be used for cheating
-- **🖱️ Right-click Blocking**: Prevents access to browser context menus
-- **🔍 Fullscreen Enforcement**: Optional fullscreen mode for enhanced security
-- **📷 Violation Image Capture**: Automatically captures screenshots during violations
+### 👁️ **Intelligent Monitoring**
+- **Attention Tracking**: Real-time gaze direction analysis
+- **Behavior Analysis**: Suspicious activity detection
+- **Environmental Monitoring**: Audio and visual distraction detection
+- **Screen Activity**: Tab switching and window change detection
 
-### Monitoring & Reporting
-- **📊 Real-time Dashboard**: Live monitoring of all active exam sessions
-- **📈 Analytics & Statistics**: Comprehensive violation analysis and trends
-- **📄 PDF Report Generation**: Detailed violation reports for each session
-- **💾 Database Integration**: SQLite database for persistent data storage
-- **🔔 Alert System**: Visual and audio alerts for various violation types
+### 🛡️ **Security Enforcement**
+- **Keyboard Shortcuts**: Prevention of Alt+Tab, Ctrl+C, etc.
+- **Context Menus**: Right-click blocking
+- **Fullscreen Mode**: Optional fullscreen enforcement
+- **Copy Protection**: Prevention of content copying
 
-### User Experience
-- **🎨 Modern UI Design**: Professional, intuitive interface with Bootstrap 5
-- **📱 Responsive Design**: Works seamlessly across desktop, tablet, and mobile
-- **🎵 Sound Notifications**: Audio alerts for critical violations
-- **⚡ Real-time Updates**: Live status updates and violation tracking
-- **🌙 Dark/Light Themes**: Customizable appearance (coming soon)
+### 📈 **Comprehensive Reporting**
+- **Real-time Violations**: Instant alerts and logging
+- **PDF Reports**: Professional violation summaries
+- **Analytics Dashboard**: Trends and insights
+- **Data Export**: Multiple format support
 
 ## 🛠️ Installation
 
-### Prerequisites
-- Python 3.8 or later
-- Webcam access
-- Modern web browser (Chrome, Firefox, Safari, Edge)
-
-### Automated Setup
+### 🚀 **Quick Start (Recommended)**
 
 #### Windows
-```cmd
+```bash
 # Run the setup script
 setup.bat
 ```
