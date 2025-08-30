@@ -398,22 +398,6 @@ class ProctoringSystem {
             }
         }
     }
-                this.updateStatus('faceStatus', `Multiple faces (${data.face_count})`, 'danger');
-                faceCard.className = 'status-card danger';
-                this.playAlert();
-                this.showNotification('Multiple people detected! Only the student should be visible.', 'danger');
-                break;
-            case 'unverified':
-                this.updateStatus('faceStatus', 'Face not recognized', 'danger');
-                faceCard.className = 'status-card danger';
-                this.playAlert();
-                this.showNotification('Unrecognized person detected!', 'danger');
-                break;
-            default:
-                this.updateStatus('faceStatus', 'Checking...', 'warning');
-                faceCard.className = 'status-card warning';
-        }
-    }
 
     handleAttentionResult(data) {
         const attentionCard = document.getElementById('attentionStatusCard');
