@@ -13,6 +13,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 import threading
 import time
+import logging
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Use non-GUI backend
+import io
 
 app = Flask(__name__)
 CORS(app)

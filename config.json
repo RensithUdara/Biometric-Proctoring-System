@@ -2,11 +2,15 @@
     "face_recognition": {
         "tolerance": 0.6,
         "model": "large",
-        "jitters": 1
+        "jitters": 1,
+        "enable_emotion_detection": true,
+        "min_face_size": 50
     },
     "monitoring": {
-        "face_check_interval": 5,
-        "attention_check_interval": 3,
+        "face_check_interval": 3,
+        "attention_check_interval": 2,
+        "object_detection_enabled": true,
+        "suspicious_object_detection": true,
         "violation_threshold": {
             "consecutive_no_face": 3,
             "max_tab_switches": 5,
