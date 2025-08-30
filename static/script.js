@@ -1,4 +1,4 @@
-// Advanced Proctoring System JavaScript
+// Enhanced Proctoring System JavaScript
 class ProctoringSystem {
     constructor() {
         this.video = document.getElementById('webcam');
@@ -12,10 +12,43 @@ class ProctoringSystem {
         this.consecutiveNoFace = 0;
         this.tabSwitchCount = 0;
         this.isRecording = false;
+        this.analytics = {
+            faceVerifications: 0,
+            attentionChecks: 0,
+            totalViolations: 0,
+            sessionStartTime: null
+        };
         
         this.initializeCamera();
         this.setupEventListeners();
         this.loadSavedData();
+        this.initializeAnalytics();
+    }
+
+    initializeAnalytics() {
+        this.analytics.sessionStartTime = new Date();
+        this.updateAnalyticsDisplay();
+    }
+
+    updateAnalyticsDisplay() {
+        // Update analytics in the UI if elements exist
+        const elements = {
+            faceVerifications: document.getElementById('faceVerifications'),
+            attentionChecks: document.getElementById('attentionChecks'),
+            sessionDuration: document.getElementById('sessionDuration')
+        };
+
+        if (elements.faceVerifications) {
+            elements.faceVerifications.textContent = this.analytics.faceVerifications;
+        }
+        if (elements.attentionChecks) {
+            elements.attentionChecks.textContent = this.analytics.attentionChecks;
+        }
+        if (elements.sessionDuration && this.analytics.sessionStartTime) {
+            const duration = new Date() - this.analytics.sessionStartTime;
+            const minutes = Math.floor(duration / 60000);
+            elements.sessionDuration.textContent = `${minutes} minutes`;
+        }
     }
 
     async initializeCamera() {
@@ -186,14 +219,18 @@ class ProctoringSystem {
                     });
 
                     const data = await response.json();
+                    this.analytics.faceVerifications++;
                     this.handleFaceVerificationResult(data);
+                    this.updateAnalyticsDisplay();
                 } catch (error) {
                     console.error('Face verification error:', error);
                     this.updateStatus('faceStatus', 'Verification error', 'danger');
+                    this.addSystemLog('Face verification failed', 'error');
                 }
             }, 'image/jpeg', 0.8);
         } catch (error) {
             console.error('Face capture error:', error);
+            this.addSystemLog('Face capture error', 'error');
         }
     }
 
@@ -218,9 +255,12 @@ class ProctoringSystem {
                     });
 
                     const data = await response.json();
+                    this.analytics.attentionChecks++;
                     this.handleAttentionResult(data);
+                    this.updateAnalyticsDisplay();
                 } catch (error) {
                     console.error('Attention analysis error:', error);
+                    this.addSystemLog('Attention analysis failed', 'error');
                 }
             }, 'image/jpeg', 0.8);
         } catch (error) {
@@ -232,22 +272,132 @@ class ProctoringSystem {
         const faceCard = document.getElementById('faceStatusCard');
         const faceStatus = document.getElementById('faceStatus');
 
+        // Handle enhanced analysis data
+        if (data.analysis) {
+            this.handleAnalysisData(data.analysis);
+        }
+
         switch (data.status) {
             case 'verified':
-                this.updateStatus('faceStatus', `Verified: ${data.name} (${data.confidence}%)`, 'success');
-                faceCard.className = 'status-card verified';
+                this.updateStatus('faceStatus', 
+                    `✓ Verified: ${data.name} (${data.confidence}%)`, 'success');
+                faceCard.className = 'status-card verified fade-in';
                 this.consecutiveNoFace = 0;
+                this.addSystemLog(`Face verified: ${data.name} with ${data.confidence}% confidence`, 'success');
                 break;
             case 'no_face':
                 this.consecutiveNoFace++;
-                this.updateStatus('faceStatus', 'No face detected', 'danger');
-                faceCard.className = 'status-card danger';
+                this.updateStatus('faceStatus', '⚠ No face detected', 'danger');
+                faceCard.className = 'status-card danger fade-in';
                 if (this.consecutiveNoFace >= 3) {
                     this.playAlert();
-                    this.showNotification('Please ensure your face is visible to the camera!', 'warning');
+                    this.showNotification('⚠ Please ensure your face is visible to the camera!', 'warning');
+                    this.addSystemLog('Multiple consecutive no-face detections', 'warning');
                 }
                 break;
             case 'multiple_faces':
+                this.updateStatus('faceStatus', `🚫 Multiple faces (${data.face_count})`, 'danger');
+                faceCard.className = 'status-card danger fade-in';
+                this.playAlert();
+                this.showNotification('🚫 Multiple people detected! Only the student should be visible.', 'danger');
+                this.addSystemLog(`Multiple faces detected: ${data.face_count}`, 'danger');
+                break;
+            case 'unverified':
+                this.updateStatus('faceStatus', '❌ Face not recognized', 'danger');
+                faceCard.className = 'status-card danger fade-in';
+                this.playAlert();
+                this.showNotification('❌ Unrecognized person detected!', 'danger');
+                this.addSystemLog('Unrecognized person detected', 'danger');
+                break;
+            default:
+                this.updateStatus('faceStatus', '🔍 Checking...', 'warning');
+                faceCard.className = 'status-card warning fade-in';
+        }
+    }
+
+    handleAnalysisData(analysis) {
+        // Handle image quality feedback
+        if (analysis.image_quality) {
+            const quality = analysis.image_quality;
+            if (quality.score < 50) {
+                this.showNotification(`Image quality issues: ${quality.issues.join(', ')}`, 'info');
+            }
+        }
+
+        // Handle suspicious objects
+        if (analysis.suspicious_objects && analysis.suspicious_objects.length > 0) {
+            analysis.suspicious_objects.forEach(obj => {
+                this.showNotification(`⚠ Suspicious object detected: ${obj}`, 'warning');
+                this.addSystemLog(`Suspicious object: ${obj}`, 'warning');
+            });
+        }
+
+        // Handle gaze analysis
+        if (analysis.gaze_analysis) {
+            const gaze = analysis.gaze_analysis;
+            this.updateGazeDisplay(gaze);
+        }
+    }
+
+    updateGazeDisplay(gazeData) {
+        const gazeElement = document.getElementById('gazeScore');
+        if (gazeElement) {
+            gazeElement.textContent = `Attention Score: ${gazeData.score || 0}%`;
+        }
+    }
+
+    handleAttentionResult(data) {
+        const attentionCard = document.getElementById('attentionStatusCard');
+        const attentionStatus = document.getElementById('attentionStatus');
+
+        // Handle enhanced analysis data
+        if (data.analysis) {
+            const score = data.analysis.attention_score || 0;
+            const details = data.details || [];
+            
+            switch (data.status) {
+                case 'attentive':
+                    this.updateStatus('attentionStatus', `👁 Focused (Score: ${score}%)`, 'success');
+                    attentionCard.className = 'status-card verified fade-in';
+                    break;
+                case 'attention_warning':
+                    this.updateStatus('attentionStatus', `⚠ Attention Warning (Score: ${score}%)`, 'warning');
+                    attentionCard.className = 'status-card warning fade-in';
+                    this.showNotification('Please focus on the exam', 'warning');
+                    break;
+                case 'distracted':
+                    this.updateStatus('attentionStatus', `❌ Distracted (Score: ${score}%)`, 'danger');
+                    attentionCard.className = 'status-card danger fade-in';
+                    this.showNotification('Student appears distracted', 'danger');
+                    break;
+                default:
+                    this.updateStatus('attentionStatus', '🔍 Monitoring...', 'warning');
+                    attentionCard.className = 'status-card warning fade-in';
+            }
+        }
+    }
+
+    addSystemLog(message, type) {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+        
+        // You could also add to a visual log panel if it exists
+        const logPanel = document.getElementById('systemLogs');
+        if (logPanel) {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `
+                <span class="log-time">${timestamp}</span>
+                <span class="log-message">${message}</span>
+            `;
+            logPanel.prepend(logEntry);
+            
+            // Keep only last 10 entries
+            while (logPanel.children.length > 10) {
+                logPanel.removeChild(logPanel.lastChild);
+            }
+        }
+    }
                 this.updateStatus('faceStatus', `Multiple faces (${data.face_count})`, 'danger');
                 faceCard.className = 'status-card danger';
                 this.playAlert();
