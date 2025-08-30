@@ -1,0 +1,37 @@
+{
+    "face_recognition": {
+        "tolerance": 0.6,
+        "model": "large",
+        "jitters": 1
+    },
+    "monitoring": {
+        "face_check_interval": 5,
+        "attention_check_interval": 3,
+        "violation_threshold": {
+            "consecutive_no_face": 3,
+            "max_tab_switches": 5,
+            "max_violations_per_session": 10
+        }
+    },
+    "alerts": {
+        "enable_sound_alerts": true,
+        "enable_visual_alerts": true,
+        "enable_notifications": true
+    },
+    "security": {
+        "prevent_right_click": true,
+        "prevent_keyboard_shortcuts": true,
+        "require_fullscreen": false,
+        "block_multiple_tabs": true
+    },
+    "recording": {
+        "enable_screen_recording": false,
+        "enable_audio_recording": false,
+        "save_violation_images": true,
+        "image_quality": 0.8
+    },
+    "database": {
+        "cleanup_old_sessions": true,
+        "session_retention_days": 30
+    }
+}
