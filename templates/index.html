@@ -388,6 +388,20 @@
                 background: white;
                 border-radius: 16px;
                 padding: 1.5rem;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                border: 2px solid var(--border-color);
+                transition: all 0.3s ease;
+            }
+
+            .status-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+            }
+
+            .status-card .icon {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+            }
         }
 
         .status-card.verified .icon { color: var(--success-color); }
