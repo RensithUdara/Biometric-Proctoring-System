@@ -265,20 +265,93 @@ def log_violation(violation_type, details):
     with open(REPORTS_FILE, 'w') as f:
         json.dump(logs, f, indent=2)
 
+def log_violation_db(violation_type, details, severity=1, image_data=None):
+    session_id = session.get('session_id', 'unknown')
+    timestamp = datetime.datetime.now()
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO violations (session_id, timestamp, violation_type, details, severity, image_data)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (session_id, timestamp, violation_type, details, severity, image_data))
+    conn.commit()
+    conn.close()
+
 def create_pdf_report():
-    try:
-        with open(REPORTS_FILE, 'r') as f:
-            logs = json.load(f)
-    except:
-        logs = []
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
-    pdf.ln(10)
-    for log in logs:
-        line = f"{log['timestamp']} | {log['type']} | {log['details']}"
-        pdf.multi_cell(0, 10, txt=line)
+    session_id = session.get('session_id')
+    
+    # Get data from database if session exists, otherwise use JSON file
+    if session_id:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT s.student_name, s.exam_name, s.start_time, s.end_time,
+                   v.timestamp, v.violation_type, v.details, v.severity
+            FROM sessions s
+            LEFT JOIN violations v ON s.session_id = v.session_id
+            WHERE s.session_id = ?
+            ORDER BY v.timestamp
+        ''', (session_id,))
+        data = cursor.fetchall()
+        conn.close()
+        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
+        pdf.ln(10)
+        
+        if data:
+            student_name = data[0][0] or 'Unknown'
+            exam_name = data[0][1] or 'Unknown Exam'
+            start_time = data[0][2]
+            end_time = data[0][3] or 'Ongoing'
+            
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt=f"Student: {student_name}", ln=True)
+            pdf.cell(200, 10, txt=f"Exam: {exam_name}", ln=True)
+            pdf.cell(200, 10, txt=f"Start Time: {start_time}", ln=True)
+            pdf.cell(200, 10, txt=f"End Time: {end_time}", ln=True)
+            pdf.ln(10)
+            
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt="Violations:", ln=True)
+            pdf.set_font("Arial", size=10)
+            
+            violation_count = 0
+            for row in data:
+                if row[4]:  # If timestamp exists (violation data)
+                    violation_count += 1
+                    severity_text = ["Low", "Medium", "High", "Critical"][min(row[7]-1, 3)]
+                    line = f"{row[4]} | {row[5]} | {row[6]} | Severity: {severity_text}"
+                    pdf.multi_cell(0, 8, txt=line)
+            
+            if violation_count == 0:
+                pdf.cell(200, 10, txt="No violations recorded.", ln=True)
+            else:
+                pdf.ln(5)
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(200, 10, txt=f"Total Violations: {violation_count}", ln=True)
+    else:
+        # Fallback to JSON file
+        try:
+            with open(REPORTS_FILE, 'r') as f:
+                logs = json.load(f)
+        except:
+            logs = []
+        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font("Arial", size=10)
+        
+        for log in logs:
+            line = f"{log['timestamp']} | {log['type']} | {log['details']}"
+            pdf.multi_cell(0, 8, txt=line)
+    
     os.makedirs(os.path.dirname(PDF_REPORT_PATH), exist_ok=True)
     pdf.output(PDF_REPORT_PATH)
 
