@@ -62,15 +62,75 @@ def init_db():
 init_db()
 
 # Load known face encodings
-for filename in os.listdir(KNOWN_FACES_DIR):
-    img = face_recognition.load_image_file(f"{KNOWN_FACES_DIR}/{filename}")
-    encoding = face_recognition.face_encodings(img)[0]
-    known_face_encodings.append(encoding)
-    known_face_names.append(filename.split('.')[0])
+def load_known_faces():
+    global known_face_encodings, known_face_names
+    known_face_encodings = []
+    known_face_names = []
+    
+    if not os.path.exists(KNOWN_FACES_DIR):
+        os.makedirs(KNOWN_FACES_DIR)
+        return
+        
+    for filename in os.listdir(KNOWN_FACES_DIR):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            try:
+                img_path = os.path.join(KNOWN_FACES_DIR, filename)
+                img = face_recognition.load_image_file(img_path)
+                encodings = face_recognition.face_encodings(img)
+                
+                if encodings:
+                    known_face_encodings.append(encodings[0])
+                    known_face_names.append(os.path.splitext(filename)[0])
+                else:
+                    print(f"No face found in {filename}")
+            except Exception as e:
+                print(f"Error processing {filename}: {e}")
+
+# Load faces on startup
+load_known_faces()
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/start-session', methods=['POST'])
+def start_session():
+    data = request.get_json()
+    session_id = secrets.token_urlsafe(16)
+    student_name = data.get('student_name', 'Unknown')
+    exam_name = data.get('exam_name', 'Exam')
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO sessions (session_id, student_name, exam_name, start_time, status)
+        VALUES (?, ?, ?, ?, 'active')
+    ''', (session_id, student_name, exam_name, datetime.datetime.now()))
+    conn.commit()
+    conn.close()
+    
+    session['session_id'] = session_id
+    session['student_name'] = student_name
+    
+    return jsonify({"status": "success", "session_id": session_id})
+
+@app.route('/end-session', methods=['POST'])
+def end_session():
+    session_id = session.get('session_id')
+    if not session_id:
+        return jsonify({"status": "error", "message": "No active session"})
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE sessions SET end_time = ?, status = 'completed'
+        WHERE session_id = ?
+    ''', (datetime.datetime.now(), session_id))
+    conn.commit()
+    conn.close()
+    
+    session.clear()
+    return jsonify({"status": "success"})
 
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
