@@ -134,31 +134,118 @@ def end_session():
 
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
-    file = request.files['image']
-    npimg = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+    try:
+        file = request.files['image']
+        npimg = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
-    rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    faces = face_recognition.face_encodings(rgb_img)
+        if img is None:
+            return jsonify({"status": "error", "message": "Invalid image"})
 
-    if not faces:
-        log_violation("no_face", "No face detected")
-        return jsonify({"status": "no_face"})
+        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_img)
+        faces = face_recognition.face_encodings(rgb_img, face_locations)
 
-    match = face_recognition.compare_faces(known_face_encodings, faces[0])
-    if True in match:
-        return jsonify({"status": "verified", "name": known_face_names[match.index(True)]})
-    else:
-        log_violation("unverified", "Face did not match any registered user")
-        return jsonify({"status": "unverified"})
+        if not faces:
+            log_violation_db("no_face", "No face detected", 3)
+            return jsonify({"status": "no_face", "face_count": 0})
+
+        # Check for multiple faces
+        if len(faces) > 1:
+            log_violation_db("multiple_faces", f"Multiple faces detected: {len(faces)}", 4, 
+                           base64.b64encode(cv2.imencode('.jpg', img)[1]).decode())
+            return jsonify({"status": "multiple_faces", "face_count": len(faces)})
+
+        # Verify the single face
+        if known_face_encodings:
+            face_distances = face_recognition.face_distance(known_face_encodings, faces[0])
+            best_match_index = np.argmin(face_distances)
+            
+            if face_distances[best_match_index] < 0.6:  # Threshold for face recognition
+                confidence = (1 - face_distances[best_match_index]) * 100
+                return jsonify({
+                    "status": "verified", 
+                    "name": known_face_names[best_match_index],
+                    "confidence": round(confidence, 2),
+                    "face_count": 1
+                })
+        
+        log_violation_db("unverified", "Face did not match any registered user", 4,
+                        base64.b64encode(cv2.imencode('.jpg', img)[1]).decode())
+        return jsonify({"status": "unverified", "face_count": 1})
+        
+    except Exception as e:
+        print(f"Error in face verification: {e}")
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/analyze-attention', methods=['POST'])
+def analyze_attention():
+    try:
+        file = request.files['image']
+        npimg = np.frombuffer(file.read(), np.uint8)
+        img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return jsonify({"status": "error", "message": "Invalid image"})
+
+        # Convert to grayscale for eye detection
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Load eye cascade classifier
+        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+        eyes = eye_cascade.detectMultiScale(gray, 1.3, 5)
+        
+        if len(eyes) < 2:
+            log_violation_db("eyes_not_detected", "Eyes not properly detected - possible looking away", 2)
+            return jsonify({"status": "attention_warning", "eyes_detected": len(eyes)})
+        
+        return jsonify({"status": "attentive", "eyes_detected": len(eyes)})
+        
+    except Exception as e:
+        print(f"Error in attention analysis: {e}")
+        return jsonify({"status": "error", "message": str(e)})
 
 @app.route('/log-violation', methods=['POST'])
 def log_violation_endpoint():
     data = request.get_json()
     violation_type = data.get('type')
     details = data.get('details')
+    severity = data.get('severity', 1)
     log_violation(violation_type, details)
+    log_violation_db(violation_type, details, severity)
     return jsonify({"status": "logged"})
+
+@app.route('/get-violations')
+def get_violations():
+    session_id = session.get('session_id')
+    if not session_id:
+        return jsonify({"violations": []})
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT timestamp, violation_type, details, severity
+        FROM violations
+        WHERE session_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 50
+    ''', (session_id,))
+    
+    violations = []
+    for row in cursor.fetchall():
+        violations.append({
+            'timestamp': row[0],
+            'type': row[1],
+            'details': row[2],
+            'severity': row[3]
+        })
+    
+    conn.close()
+    return jsonify({"violations": violations})
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
 
 @app.route('/download-report')
 def download_report():
@@ -178,20 +265,93 @@ def log_violation(violation_type, details):
     with open(REPORTS_FILE, 'w') as f:
         json.dump(logs, f, indent=2)
 
+def log_violation_db(violation_type, details, severity=1, image_data=None):
+    session_id = session.get('session_id', 'unknown')
+    timestamp = datetime.datetime.now()
+    
+    conn = sqlite3.connect(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO violations (session_id, timestamp, violation_type, details, severity, image_data)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (session_id, timestamp, violation_type, details, severity, image_data))
+    conn.commit()
+    conn.close()
+
 def create_pdf_report():
-    try:
-        with open(REPORTS_FILE, 'r') as f:
-            logs = json.load(f)
-    except:
-        logs = []
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
-    pdf.ln(10)
-    for log in logs:
-        line = f"{log['timestamp']} | {log['type']} | {log['details']}"
-        pdf.multi_cell(0, 10, txt=line)
+    session_id = session.get('session_id')
+    
+    # Get data from database if session exists, otherwise use JSON file
+    if session_id:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT s.student_name, s.exam_name, s.start_time, s.end_time,
+                   v.timestamp, v.violation_type, v.details, v.severity
+            FROM sessions s
+            LEFT JOIN violations v ON s.session_id = v.session_id
+            WHERE s.session_id = ?
+            ORDER BY v.timestamp
+        ''', (session_id,))
+        data = cursor.fetchall()
+        conn.close()
+        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
+        pdf.ln(10)
+        
+        if data:
+            student_name = data[0][0] or 'Unknown'
+            exam_name = data[0][1] or 'Unknown Exam'
+            start_time = data[0][2]
+            end_time = data[0][3] or 'Ongoing'
+            
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt=f"Student: {student_name}", ln=True)
+            pdf.cell(200, 10, txt=f"Exam: {exam_name}", ln=True)
+            pdf.cell(200, 10, txt=f"Start Time: {start_time}", ln=True)
+            pdf.cell(200, 10, txt=f"End Time: {end_time}", ln=True)
+            pdf.ln(10)
+            
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 10, txt="Violations:", ln=True)
+            pdf.set_font("Arial", size=10)
+            
+            violation_count = 0
+            for row in data:
+                if row[4]:  # If timestamp exists (violation data)
+                    violation_count += 1
+                    severity_text = ["Low", "Medium", "High", "Critical"][min(row[7]-1, 3)]
+                    line = f"{row[4]} | {row[5]} | {row[6]} | Severity: {severity_text}"
+                    pdf.multi_cell(0, 8, txt=line)
+            
+            if violation_count == 0:
+                pdf.cell(200, 10, txt="No violations recorded.", ln=True)
+            else:
+                pdf.ln(5)
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(200, 10, txt=f"Total Violations: {violation_count}", ln=True)
+    else:
+        # Fallback to JSON file
+        try:
+            with open(REPORTS_FILE, 'r') as f:
+                logs = json.load(f)
+        except:
+            logs = []
+        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Proctoring Violation Report", ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font("Arial", size=10)
+        
+        for log in logs:
+            line = f"{log['timestamp']} | {log['type']} | {log['details']}"
+            pdf.multi_cell(0, 8, txt=line)
+    
     os.makedirs(os.path.dirname(PDF_REPORT_PATH), exist_ok=True)
     pdf.output(PDF_REPORT_PATH)
 
