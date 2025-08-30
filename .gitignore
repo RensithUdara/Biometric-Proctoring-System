@@ -30,9 +30,8 @@ Desktop.ini
 /node_modules/
 
 # VS Code / JetBrains / editor-specific
-.vscode/
 .idea/
 *.swp
 
 # Environment files
-.env
+config.bat
