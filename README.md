@@ -68,36 +68,71 @@
 
 #### Windows
 ```bash
+# Clone the repository
+git clone https://github.com/RensithUdara/Biometric-Proctoring-System.git
+cd Biometric-Proctoring-System
+
 # Run the setup script
 setup.bat
+
+# Start the application
+start.bat
 ```
 
-#### Linux/Mac
+#### Linux/macOS
 ```bash
-# Make script executable
-chmod +x setup.sh
+# Clone the repository
+git clone https://github.com/RensithUdara/Biometric-Proctoring-System.git
+cd Biometric-Proctoring-System
 
-# Run setup
-./setup.sh
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python app.py
 ```
 
-### Manual Setup
+### 🔧 **Manual Installation**
 
-1. **Clone the repository**
+1. **Clone Repository**
 ```bash
-git clone https://github.com/yourusername/biometric-proctoring-system.git
-cd biometric-proctoring-system
+git clone https://github.com/RensithUdara/Biometric-Proctoring-System.git
+cd Biometric-Proctoring-System
 ```
 
-2. **Create virtual environment**
+2. **Setup Virtual Environment**
 ```bash
 python -m venv venv
 
-# Activate virtual environment
-# Windows:
+# Windows
 venv\Scripts\activate
-# Linux/Mac:
+
+# Linux/macOS
 source venv/bin/activate
+```
+
+3. **Install Dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Configure Application**
+```bash
+# Create necessary directories
+mkdir models\known_faces
+mkdir reports
+
+# Optional: Configure settings in config.json
+```
+
+5. **Run Application**
+```bash
+python app.py
+```
 ```
 
 3. **Install dependencies**
