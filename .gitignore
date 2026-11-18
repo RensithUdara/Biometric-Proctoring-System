@@ -34,5 +34,4 @@ Desktop.ini
 *.swp
 
 # Environment files
-.vscode/
-.env
+config.bat
