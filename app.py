@@ -1,4 +1,3 @@
-import utils.session
 from flask import Flask, render_template, request, jsonify, send_file, session
 import face_recognition
 import numpy as np
