@@ -36,3 +36,6 @@ Desktop.ini
 # Environment files
 .vscode/
 .env
+.env.*
+.env.local
+.env.production
