@@ -34,4 +34,7 @@ Desktop.ini
 *.swp
 
 # Environment files
-config.bat
+.env
+.env.*
+.env.local
+.env.production
